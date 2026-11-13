@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sihir Dükkanı · Haftalık Puantaj</title>
+<link rel="stylesheet" href="css/stil.css">
+<!-- Ücretsiz kütüphaneler (sürüm sabit) -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+</head>
+<body>
+<header class="ust">
+  <div class="ust-ic">
+    <div>
+      <div class="marka">Sihir Dükkanı</div>
+      <h1>Haftalık Puantaj Paneli</h1>
+    </div>
+    <button id="btnAyarlar" class="ikincil">⚙ Ayarlar</button>
+  </div>
+</header>
+
+<main>
+  <!-- 1. YÜKLE -->
+  <section class="kart" id="bolumYukle">
+    <h2><span class="no">1</span> Shift dosyasını yükle</h2>
+    <label class="birak" id="birakAlani">
+      <input type="file" id="dosyaSec" accept=".xlsx,.xls" hidden>
+      <span class="birak-buyuk">Dosyayı buraya sürükleyin</span>
+      <span class="birak-kucuk">veya dokunup seçin (.xlsx)</span>
+    </label>
+    <div id="dosyaBilgi" class="dosya-bilgi gizli"></div>
+    <div id="tarihSor" class="uyari-kutu gizli">
+      <p id="tarihSorMetin"></p>
+      <label>Haftanın Pazartesi tarihi: <input type="date" id="tarihGir"></label>
+      <button id="btnTarihTamam" class="birincil">Bu tarihle devam et</button>
+    </div>
+  </section>
+
+  <!-- 2. ÖNİZLEME -->
+  <section class="kart gizli" id="bolumOnizleme">
+    <h2><span class="no">2</span> Önizleme</h2>
+    <div id="sayilar" class="sayilar"></div>
+    <div id="shiftNotlari"></div>
+    <div id="sorular"></div>
+    <details class="tablo-ac">
+      <summary>Kişi kişi sonuç tablosu</summary>
+      <div class="tablo-sar"><table id="kisiTablo"></table></div>
+    </details>
+  </section>
+
+  <!-- 3. DEĞİŞİKLİKLER -->
+  <section class="kart gizli" id="bolumNotlar">
+    <h2><span class="no">3</span> Değişiklikler / Notlar</h2>
+    <p class="aciklama">Shift'te yazmayan değişiklikleri buraya yazın. Örnek: <em>Aytaç çarşamba hasta</em> · <em>Sude cuma 10-18 yerine 13:30-22</em> · <em>Furkan hasta salı, yerine İsmail Bulut One Tower 10-22</em></p>
+    <div class="hizli">
+      <input type="text" id="hizliNot" placeholder="Kısa not yazın…" autocomplete="off">
+      <button id="btnAnla" class="birincil">Ekle</button>
+    </div>
+    <div id="onayKutu" class="onay gizli">
+      <p id="onayMetin"></p>
+      <div class="dugmeler">
+        <button id="btnOnayEvet" class="birincil">Evet, doğru</button>
+        <button id="btnOnayHayir" class="ikincil">Hayır, formla gireyim</button>
+      </div>
+    </div>
+    <button id="btnFormAc" class="baglanti">+ Formla ekle</button>
+    <form id="form" class="form gizli">
+      <div class="form-izgara">
+        <label>Tür
+          <select id="fTur">
+            <option value="fazlaIzin">Hasta / rapor / fazla izin</option>
+            <option value="saat">Saat değişikliği</option>
+            <option value="ekstra">Yerine gelen / ekstra personel</option>
+            <option value="sube">Şube değişikliği</option>
+            <option value="izne">Çalışmayı izne (B) çevir</option>
+            <option value="calismaya">İzni çalışmaya çevir</option>
+          </select>
+        </label>
+        <label class="f-kisi">Kişi <select id="fKisi"></select></label>
+        <label class="f-yeniad gizli">Gelen kişinin adı <input type="text" id="fYeniAd" placeholder="Ad Soyad" list="personelListe"></label>
+        <label class="f-yerine gizli">Kimin yerine (isteğe bağlı) <select id="fYerine"></select></label>
+        <label>Gün <select id="fGun"></select></label>
+        <label class="f-neden">Neden
+          <input type="text" id="fNeden" list="nedenListe" value="Hastalık">
+        </label>
+        <label class="f-sube gizli">Şube <select id="fSube"></select></label>
+        <label class="f-saat gizli">Giriş <input type="time" id="fGiris" value="10:00"></label>
+        <label class="f-saat gizli">Çıkış <input type="time" id="fCikis" value="18:30"></label>
+      </div>
+      <datalist id="nedenListe"><option value="Hastalık"><option value="Rapor"><option value="İzinli"><option value="Gelmedi"><option value="Mazeret izni"><option value="Bayram izni"></datalist>
+      <datalist id="personelListe"></datalist>
+      <div class="dugmeler">
+        <button type="submit" class="birincil">Değişikliği ekle</button>
+        <button type="button" id="btnFormKapat" class="ikincil">Vazgeç</button>
+      </div>
+      <p id="formHata" class="hata-metin"></p>
+    </form>
+    <ul id="notListe" class="not-liste"></ul>
+  </section>
+
+  <!-- 4. ÜRET -->
+  <section class="kart gizli" id="bolumUret">
+    <h2><span class="no">4</span> Puantajı üret</h2>
+    <div id="uretUyari" class="hata-kutu gizli"></div>
+    <button id="btnUret" class="birincil buyuk">Puantajı Üret ve İndir</button>
+    <p id="uretSonuc" class="aciklama"></p>
+  </section>
+</main>
+
+<!-- AYARLAR -->
+<div id="ayarPanel" class="perde gizli" role="dialog" aria-modal="true">
+  <div class="ayar-ic">
+    <div class="ayar-baslik">
+      <h2>Ayarlar</h2>
+      <button id="btnAyarKapat" class="ikincil">Kapat</button>
+    </div>
+    <p class="aciklama">Ayarlar bu cihazın tarayıcısında saklanır. Başka cihaz için "Dışa aktar" ile dosya alıp orada "İçe aktar" yapın.</p>
+    <div class="ayar-satir">
+      <label>Full Time haftalık hedef (net saat) <input type="number" id="aHedef" step="0.5" min="0"></label>
+      <label>Vardiya başına mola (saat) <input type="number" id="aMola" step="0.25" min="0"></label>
+    </div>
+    <h3>Personel</h3>
+    <p class="aciklama">Sıra, puantajdaki sırayı belirler. "Shift'teki adlar": shift'te yazan kısa adlar, virgülle (ör. <em>SUDE</em> veya <em>ZEYNEP balyemez</em>).</p>
+    <div class="tablo-sar"><table id="aPersonel" class="ayar-tablo"></table></div>
+    <button id="btnPersonelEkle" class="baglanti">+ Personel ekle</button>
+    <h3>Şubeler</h3>
+    <div class="tablo-sar"><table id="aSubeler" class="ayar-tablo"></table></div>
+    <button id="btnSubeEkle" class="baglanti">+ Şube ekle</button>
+    <h3>Özel kodlar</h3>
+    <p class="aciklama">B her zaman haftalık izindir. Diğer kodlar burada (ör. H = Hoşdere 10:00-18:30).</p>
+    <div class="tablo-sar"><table id="aKodlar" class="ayar-tablo"></table></div>
+    <button id="btnKodEkle" class="baglanti">+ Kod ekle</button>
+    <h3>Personelsiz kalabilecek günler</h3>
+    <p class="aciklama">İşaretli şube–günlerde "kimse çalışmıyor" uyarısı verilmez.</p>
+    <div class="tablo-sar"><table id="aBos" class="ayar-tablo"></table></div>
+    <div id="ayarHata" class="hata-metin"></div>
+    <div class="dugmeler sabit-alt">
+      <button id="btnAyarKaydet" class="birincil">Kaydet</button>
+      <button id="btnAyarVarsayilan" class="tehlike">Varsayılana dön</button>
+      <button id="btnAyarDisa" class="ikincil">Dışa aktar</button>
+      <label class="ikincil dosya-dugme">İçe aktar<input type="file" id="ayarIce" accept=".json" hidden></label>
+    </div>
+  </div>
+</div>
+
+<div id="bildirim" class="bildirim gizli"></div>
+
+<footer class="alt">Dosyalar hiçbir yere gönderilmez; tüm işlem bu tarayıcıda yapılır.</footer>
+
+<script src="js/ayarlar-varsayilan.js"></script>
+<script src="js/cekirdek.js"></script>
+<script src="js/not-cozucu.js"></script>
+<script src="js/excel-model.js"></script>
+<script src="js/excel-yazici.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
